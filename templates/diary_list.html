@@ -1,0 +1,86 @@
+{% extends "dashboard.html" %}
+{% block content %}
+
+<!-- 🔼 漢堡選單 -->
+<style>
+  .menu-wrapper {
+    position: relative;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .menu-toggle {
+    font-size: 30px;
+    cursor: pointer;
+    padding: 10px;
+  }
+
+  .dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 45px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    z-index: 10;
+    padding: 10px;
+    min-width: 150px;
+  }
+
+  .dropdown a {
+    display: block;
+    padding: 8px;
+    text-decoration: none;
+    color: black;
+  }
+
+  .dropdown a:hover {
+    background-color: #f2f2f2;
+  }
+</style>
+
+<div class="menu-wrapper">
+  <div class="menu-toggle" onclick="toggleMenu()">☰</div>
+  <div id="dropdownMenu" class="dropdown">
+    <a href="/my_diary">我的日記</a>
+    <a href="/game">遊戲</a>
+    <a href="/quiz">心理測驗</a>
+    <a href="/logout">登出</a>
+  </div>
+</div>
+
+<h2>大家的日記</h2>
+{% for d in diaries %}
+{% if d.public %}
+<div>
+  {% if d.created_at %}
+  <p><strong>時間：</strong> {{ d.created_at }}（{{ time_since(d.created_at) }}）</p>
+  {% else %}
+  <p><strong>時間：</strong> 未知</p>
+  {% endif %}
+  <p>{{ d.content }}</p>
+  <hr>
+</div>
+{% endif %}
+{% endfor %}
+
+<a class="fab" href="{{ url_for('write') }}">🖊️</a>
+
+<script>
+  const dropdown = document.getElementById('dropdownMenu');
+
+  function toggleMenu() {
+    dropdown.style.display = (dropdown.style.display === 'block') ? 'none' : 'block';
+  }
+
+  document.addEventListener('click', function(event) {
+    const isClickInside = dropdown.contains(event.target) || event.target.classList.contains('menu-toggle');
+    if (!isClickInside) {
+      dropdown.style.display = 'none';
+    }
+  });
+</script>
+
+{% endblock %}

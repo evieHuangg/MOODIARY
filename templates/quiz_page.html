@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ quiz.title }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+    :root {
+      --cr-main-1: #a0d6e6;
+      --cr-main-2: #f7a7e7;
+      --cr-1: color-mix(in srgb, var(--cr-main-1), var(--cr-main-2) 20%);
+      --cr-2: color-mix(in srgb, var(--cr-main-1), var(--cr-main-2) 35%);
+      --cr-3: color-mix(in srgb, var(--cr-main-1), var(--cr-main-2) 50%);
+      --cr-4: color-mix(in srgb, var(--cr-main-1), var(--cr-main-2) 65%);
+      --cr-5: color-mix(in srgb, var(--cr-main-1), var(--cr-main-2) 80%);
+      /* NEW: Define base font size */
+      --base-font-size: 16px;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Noto Sans TC', sans-serif;
+      /* MODIFIED: Set font size relative to root */
+      font-size: var(--base-font-size);
+    }
+    body {
+      min-height: 100vh;
+      background-color: #fffafc;
+      /* MODIFIED: Reduced padding */
+      padding: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .menu-wrapper {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .menu-toggle {
+      /* MODIFIED: Smaller font size */
+      font-size: 24px;
+      cursor: pointer;
+      padding: 8px;
+    }
+
+    .dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 45px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      z-index: 10;
+      padding: 8px;
+      min-width: 120px;
+    }
+
+    .dropdown a {
+      display: block;
+      padding: 6px;
+      text-decoration: none;
+      color: black;
+      /* NEW: Smaller font size */
+      font-size: 0.85rem;
+    }
+
+    .dropdown a:hover {
+      background-color: #f2f2f2;
+    }
+
+    .blobs {
+      position: fixed;
+      z-index: -1;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      filter: blur(120px);
+    }
+
+    .blob {
+      /* MODIFIED: Reduced blob size */
+      width: max(180px, 20vw);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      position: absolute;
+      animation: horizontal-float 3s ease-in-out infinite alternate;
+    }
+
+    .blob:nth-child(1) {
+      background: var(--cr-main-1);
+      top: 20%;
+      left: 10%;
+    }
+
+    .blob:nth-child(2) {
+      background: var(--cr-main-2);
+      top: 60%;
+      left: 70%;
+    }
+
+    @keyframes horizontal-float {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(100px); }
+    }
+
+    .result-container {
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 1.5rem;
+      padding: 2rem;
+      max-width: 420px;
+      margin: 1.5rem auto;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      line-height: 1.6;
+    }
+
+    .option-label {
+      display: block;
+      border: 2px solid #ccc;
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.75rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background-color: white;
+      font-size: 1rem; /* Increased from 0.9rem */
+    }
+
+    .option-label:hover {
+      border-color: var(--cr-main-1);
+      background-color: #f0faff;
+    }
+
+    input[type="radio"]:checked + .option-label {
+      border-color: var(--cr-3);
+      background-color: var(--cr-1);
+      box-shadow: 0 0 8px var(--cr-3);
+      transform: scale(1.02);
+    }
+
+    .options input[type="radio"] {
+      display: none;
+    }
+
+    button[type="submit"] {
+      margin-top: 1.5rem;
+      /* MODIFIED: Reduced padding and font size */
+      padding: 0.5rem 2rem;
+      border: none;
+      background: var(--cr-3);
+      color: white;
+      font-weight: bold;
+      font-size: 0.9rem;
+      border-radius: 999px;
+      cursor: pointer;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+      transition: all 0.2s ease;
+    }
+
+    button[type="submit"]:not(:disabled):hover {
+      background: var(--cr-4);
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    button[type="submit"]:not(:disabled):active {
+      transform: scale(0.98);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    /* NEW: Media query for high-DPI displays */
+    @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
+      :root {
+        --base-font-size: 14px; /* Smaller base font for high-DPI */
+      }
+      .result-container {
+        max-width: 360px; /* Further reduce for high-DPI */
+      }
+      .blob {
+        width: max(150px, 18vw); /* Smaller blobs */
+      }
+      .menu-toggle {
+        font-size: 20px; /* Smaller menu icon */
+      }
+      button[type="submit"] {
+        padding: 0.4rem 1.8rem;
+        font-size: 0.85rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="menu-wrapper">
+  <div class="menu-toggle" onclick="toggleMenu()">☰</div>
+  <div class="dropdown" id="dropdownMenu">
+    <a href="/dashboard">所有日記</a>
+    <a href="/my_diary">我的日記</a>
+    <a href="/game">遊戲</a>
+    <a href="/logout">登出</a>
+  </div>
+</div>
+
+<div class="blobs">
+  <div class="blob"></div>
+  <div class="blob"></div>
+</div>
+
+<div class="result-container">
+  <h2>{{ quiz.title }}</h2>
+  <p>{{ quiz.description }}</p>
+  <h3>第 {{ page }} 題（共 {{ total }} 題）</h3>
+  <p><strong>{{ q.text }}</strong></p>
+  <form method="post">
+    <div class="options">
+      {% for opt, val in zip(q["options"], q["values"]) %}
+      <input type="radio" name="{{ q.id }}" value="{{ val }}" id="{{ q.id }}_{{ loop.index }}" required hidden>
+      <label for="{{ q.id }}_{{ loop.index }}" class="option-label">{{ opt }}</label>
+      {% endfor %}
+    </div>
+    <button type="submit">下一題</button>
+  </form>
+</div>
+
+<script>
+  const dropdown = document.getElementById('dropdownMenu');
+  function toggleMenu() {
+    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+  }
+
+  document.addEventListener('click', function(event) {
+    const isClickInside = dropdown.contains(event.target) || event.target.classList.contains('menu-toggle');
+    if (!isClickInside) dropdown.style.display = 'none';
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const radios = document.querySelectorAll('input[type="radio"]');
+    const submitBtn = document.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = 0.5;
+      submitBtn.style.cursor = 'not-allowed';
+    }
+
+    radios.forEach(radio => {
+      radio.addEventListener('change', () => {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = 1;
+        submitBtn.style.cursor = 'pointer';
+      });
+    });
+
+    submitBtn?.addEventListener('click', () => {
+      submitBtn.innerText = '載入中...';
+      submitBtn.style.opacity = 0.6;
+    });
+  });
+</script>
+
+</body>
+</html>

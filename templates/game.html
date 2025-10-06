@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SimpleGame</title>
+  <style>
+
+    body{
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      transition: background 1s ease-in-out;
+    }
+    .menu-wrapper {
+      position: absolute;
+      top: 0;
+      right: 0;
+      display: flex;
+      justify-content: flex-end;
+      padding: 10px;
+      background: white;
+    }
+
+    .menu-toggle {
+      font-size: 30px;
+      cursor: pointer;
+    }
+
+    .dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 45px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      z-index: 10;
+      padding: 10px;
+      min-width: 150px;
+    }
+
+    .dropdown a {
+      display: block;
+      padding: 8px;
+      text-decoration: none;
+      color: black;
+    }
+
+    .dropdown a:hover {
+      background-color: #f2f2f2;
+    }
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      max-width: 700px;
+      aspect-ratio: 1 / 1;
+    }
+    /* .canvas-container {
+        position: relative;
+        width: 90vw;
+        max-width: 600px;
+        aspect-ratio: 1 / 1;
+        margin-top: 20px;
+    } */
+    /* canvas {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+    } */
+    canvas {
+      position: absolute;
+      top: -50px;
+      width: 100%;
+      height: 100%;
+      border: 1px solid white;
+    }
+
+    #backgroundCanvas {
+      background-image: url(static/images/Props/Room.png);
+      /* background-size: cover; */
+      background-repeat: no-repeat;
+      background-position: center;
+      z-index: 0;
+    }
+    #catCanvas {
+      z-index: 1;
+      pointer-events: none;
+    }
+    #props-list {
+      position: absolute;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      padding: 5px;
+      border-radius: 10px;
+      max-width: 90%;
+      z-index: 2;
+      background: rgba(255, 255, 255, 0.95);
+    }
+
+    .props-item {
+      width: 64px;
+      height: 64px;
+      cursor: pointer;
+      opacity: 1;
+      filter: none;
+      transition: opacity 0.3s ease, filter 0.3s ease;
+    }
+    .props-item.used {
+      filter: grayscale(100%) brightness(70%);
+      opacity: 0.6;
+      cursor: pointer;
+    }
+    .props-item.disabled {
+      pointer-events: none;
+    }
+    #time-ui {
+      position: absolute;
+      top: 40px;
+      left: 20px;
+      font-size: 1.5em;
+      font-family: monospace;
+      color: white;
+      text-shadow: 1px 1px 2px black;
+    }
+    #audio-ui {
+      position: absolute;
+      left: 20px;
+      font-size: 1.5em;
+      z-index: 9999;
+    }
+    #status-bars {
+      position: absolute;
+      right: 10px;
+      width: 150px;
+      font-family: sans-serif;
+      font-size: 14px;
+      color: white;
+      z-index: 10;
+    }
+    .status {
+      margin-bottom: 10px;
+    }
+    .bar-container {
+      width: 100%;
+      height: 20px;
+      background: #eee;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.2);
+    }
+    .bar {
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    .bar.hunger {
+      background-color: #e74c3c;
+    }
+    .bar.thirst {
+      background-color: #3498db;
+    }
+    #guide-overlay {
+      position: fixed;
+      z-index: 99999;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #guide-modal {
+      background: white;
+      padding: 20px 30px;
+      border-radius: 12px;
+      max-width: 400px;
+      text-align: left;
+      font-family: sans-serif;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    }
+    #guide-modal h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    .content{
+      width: 100vw;
+      height: 100vh;
+      background-size: 120%;
+    }
+    #rainBox{
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+    }
+    .rain{
+      position: absolute;
+      width: 2px;
+      height: 50px;
+      background: linear-gradient(rgba(255,255,255,.3),rgba(255,255,255,.6));
+    }
+  </style>
+</head>
+<body>
+<div class="menu-wrapper">
+  <div class="menu-toggle" onclick="toggleMenu()">☰</div>
+  <div class="dropdown" id="dropdownMenu">
+    <a href="/dashboard">所有日記</a>
+    <a href="/my_diary">我的日記</a>
+    <a href="/quiz">心理測驗</a>
+    <a href="/logout">登出</a>
+  </div>
+</div>
+
+<div id="rainBox"></div>
+<div class="content"></div>
+
+<div class="canvas-container" >
+  <canvas id="backgroundCanvas"></canvas>
+  <canvas id="catCanvas"></canvas>
+
+  <audio id="bgm" src="static/sounds/Vloger-Main-version.mp3" loop></audio>
+  <button onclick="toggleMute()" id="audio-ui">🔊</button>
+
+  <div id="time-ui">🕒 00:00</div>
+
+  <div id="status-bars">
+    <div class="status">
+      <label>飢餓</label>
+      <div class="bar-container">
+        <div id="hungerBar" class="bar hunger"></div>
+      </div>
+    </div>
+    <div class="status">
+      <label>口渴</label>
+      <div class="bar-container">
+        <div id="thirstBar" class="bar thirst"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="props-list">
+    <img class="props-item" src="static/images/Props/Window.png" data-type="Window" draggable="true"/>
+    <img class="props-item" src="static/images/Props/Picture1.png" data-type="picture1" draggable="true"/>
+    <img class="props-item" src="static/images/Props/Picture2.png" data-type="picture2" draggable="true"/>
+    <img class="props-item" src="static/images/Props/Shelves.png" data-type="shelves" draggable="true"/>
+    <img class="props-item" src="static/images/Props/Plant.png" data-type="plant" draggable="true"/>
+    <img class="props-item" src="static/images/Props/Bed.png" data-type="bed" draggable="true"/>
+    <img class="props-item" src="static/images/Props/Ball.png" data-type="ball" draggable="true"/>
+    <img class="props-item" src="static/images/Props/FoodBowl.png" data-type="FoodBowl" draggable="true"/>
+    <img class="props-item" src="static/images/Props/WaterBowl.png" data-type="WaterBowl" draggable="true"/>
+  </div>
+</div>
+<div id="guide-overlay">
+  <div id="guide-modal">
+    <h2>遊戲說明</h2>
+    <ul>
+      <li>點擊家具後，再點擊房間放置</li>
+      <li>或者你也可以直接拖曳</li>
+      <li>貓咪會吃飯、喝水、睡覺或玩球</li>
+      <li>飢餓/口渴會隨時間下降</li>
+      <li>重複點擊道具可移除</li>
+      <li>食物和水每三分鐘更新一次</li>
+    </ul>
+    <p style="margin-top:10px; font-size: 0.9em; color: gray;">👉 點擊畫面任意處以開始遊戲</p>
+  </div>
+</div>
+
+
+<script>
+  const bgCanvas = document.getElementById("backgroundCanvas");
+  const bgCtx = bgCanvas.getContext("2d");
+  const catCanvas = document.getElementById("catCanvas");
+  const catCtx = catCanvas.getContext("2d");
+  const catSprite = new Image();
+  catSprite.src = 'static/images/Cat.png';
+  const catFrameWidth = 88.25;
+  const catFrameHeight = 88.375;
+  const catFrameCount1 = 4;
+  const catFrameCount2 = 2;
+  let catX = 500, catY = 340.0;
+  let catFrameIndex = 0;
+  let catStepSpeed  = 5;
+  let catIsMove = false;
+  let catIsTrigger = false;
+
+  let lastFeedTime =[0,0]; // food,water
+  const FEED_INTERVAL = 0.3 * 60 * 1000;
+  let hunger = 100;
+  let thirst = 100;
+
+  let hasMeowed = false;
+  const meowAudio = new Audio('static/sounds/meow.mp3');
+  meowAudio.volume = 0.1;
+
+  const catActionMap = new Map([
+    ["walkFront", 0],
+    ["walkRight", 1],
+    ["walkBack", 2],
+    ["walkLeft", 3],
+    ["sitDown", 4],
+    ["idle", 5],
+    ["eat", 6],
+    ["sleep", 7]
+  ]);
+  const catActionIndex = ["walkFront", "walkRight", "walkBack", "walkLeft", "sitDown", "idle", 'eat', 'sleep'];
+
+  let selectedProps = null;
+  // 全域變數記錄當前拖曳物件
+  let draggingProps = null;
+  let  propsList = [];
+  let usedPropsTypes = new Set();
+  const PropsIsOnWall = new Map([
+    ["Window", true],
+    ["picture1", true],
+    ["picture2", true],
+    ["shelves", false],
+    ["plant", false],
+    ["bed", false],
+    ["FoodBowl", false],
+    ["WaterBowl", false],
+    ["ball", false]
+  ]);
+
+
+  const leftWallPolygon = [
+    { x: 345, y: 143 },
+    { x: 345,  y: 289 },
+    { x: 129, y: 400 },
+    { x: 124, y: 264 }
+  ];
+  const rightWallPolygon = [
+    { x: 358, y: 143 },
+    { x: 583,  y: 262 },
+    { x: 577, y: 406 },
+    { x: 364, y: 290 }
+  ];
+  const floorPolygon = [
+    { x: 352, y: 299 },
+    { x: 131,  y: 414 },
+    { x: 352, y: 525 },
+    { x: 575, y: 416 }
+  ];
+  const floorPolygonCat = [
+    { x: 310, y: 250 },
+    { x: 120,  y: 340 },
+    { x: 310, y: 450 },
+    { x: 500, y: 340 }
+  ];
+  const leftfloor = floorPolygon.slice(0, 3);
+  const rightfloor = [floorPolygon[0], floorPolygon[2], floorPolygon[3]];
+
+
+  const bgm = document.getElementById("bgm");
+  const box=document.getElementById('rainBox');
+  let boxHeight=box.clientHeight;
+  let boxWidth=box.clientWidth;
+  const dropdown = document.getElementById('dropdownMenu');
+  ///////////////////////////////////////////////////////////////////
+
+
+
+  function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function isPointInPolygon(point, polygon) {
+    let { x, y } = point;
+    let inside = false;
+
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      const xi = polygon[i].x, yi = polygon[i].y;
+      const xj = polygon[j].x, yj = polygon[j].y;
+
+      const intersect = ((yi > y) !== (yj > y)) &&
+              (x < ((xj - xi) * (y - yi)) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+
+  /////////////////////////////////Cat///////////////////////////////
+
+  function drawCat(action) {
+    const sx = catFrameIndex * catFrameWidth;
+    catCtx.clearRect(0, 0, catCanvas.width, catCanvas.height);
+    catCtx.drawImage(catSprite, sx, catFrameHeight * action, catFrameWidth, catFrameHeight, catX , catY, catFrameWidth, catFrameHeight);
+  }
+  function updateStatusBars() {
+    const hungerPercent = Math.min(hunger, 100);
+    const thirstPercent = Math.min(thirst, 100);
+
+    document.getElementById("hungerBar").style.width = hungerPercent + "%";
+    document.getElementById("thirstBar").style.width = thirstPercent + "%";
+  }
+  function playMeow() {
+    if (meowAudio.paused) {
+      meowAudio.play();
+    }
+  }
+  async function walkToRandomTarget(act) {
+    const directions = [
+      { dx: 0, dy: catStepSpeed },   // walkFront
+      { dx: catStepSpeed, dy: 0 },   // walkRight
+      { dx: 0, dy: -catStepSpeed },  // walkBack
+      { dx: -catStepSpeed, dy: 0 }   // walkLeft
+    ];
+
+    const { dx, dy } = directions[act] || { dx: 0, dy: 0 };
+    let Steps = Math.floor(Math.random() * 50);
+    for (let i = 0; i < Steps; i++) {
+      const targetX = catX + dx;
+      const targetY = catY + dy;
+      if(catIsTrigger) break;
+      if (!isPointInPolygon({ x: targetX, y: targetY }, floorPolygonCat)) break;
+      catX = targetX;
+      catY = targetY;
+      drawCat(catActionMap.get(catActionIndex[act]));
+      catFrameIndex = (catFrameIndex + 1) % catFrameCount1;
+
+      await wait(200);
+    }
+    catIsMove = false;
+  }
+  async function sitDown(){
+    catFrameIndex = 0;
+    let Steps = Math.floor(Math.random() * 20);
+    for(let i = 0; i<Steps; i++){
+      if(catIsTrigger) break;
+      drawCat(catActionMap.get("sitDown"));
+      catFrameIndex++;
+      catFrameIndex = Math.min(catFrameIndex, catFrameCount1-1);
+      await wait(200);
+    }
+    catIsMove = false;
+  }
+  async function idle(){
+    catFrameIndex = 0;
+    let Steps = Math.floor(Math.random() * 20);
+    for(let i = 0; i<Steps; i++){
+      if(catIsTrigger) break;
+      drawCat(catActionMap.get("idle"));
+      catFrameIndex = (catFrameIndex + 1) % catFrameCount1;
+      await wait(200);
+    }
+    catIsMove = false;
+  }
+  async function pickRandomAction(){
+    let act = Math.floor(Math.random() * 5);
+    //wolkFront:0 wolkLeft:1 wolkBack:2 wolkRight:3 sitDown:4 idle:5
+    if(act<=3)
+      walkToRandomTarget(act);
+    else if(act==4)
+      sitDown();
+    else if(act==5)
+      idle();
+  }
+
+  async function walkToTarget(targetX, targetY){
+    const speed = 20;
+    catFrameIndex = 0;
+    while (Math.abs(catX - targetX) > speed) {
+      catX += Math.sign(targetX - catX) * speed;
+      const action = catX < targetX ? "walkRight" : "walkLeft";
+      drawCat(catActionMap.get(action));
+      catFrameIndex = (catFrameIndex + 1) % catFrameCount1;
+      await wait(200);
+    }
+    catFrameIndex = 0;
+    while (Math.abs(catY - targetY) > speed) {
+      catY += Math.sign(targetY - catY) * speed;
+      const action = catY < targetY ? "walkFront" : "walkBack";
+      drawCat(catActionMap.get(action));
+      catFrameIndex = (catFrameIndex + 1) % catFrameCount1;
+      await wait(200);
+    }
+  }
+  async function doAction(act, catFrameCount, Steps){
+    catFrameIndex = 0;
+    for(let i = 0; i<Steps; i++){
+      drawCat(catActionMap.get(act));
+      catFrameIndex = (catFrameIndex + 1) % catFrameCount;
+      await wait(200);
+    }
+  }
+
+  async function triggerCatEat(targetX, targetY, eatWhat) {
+    playMeow();
+    lastFeedTime[eatWhat] = Date.now();
+    eatWhat === 0 ? hunger = Math.min(hunger + 40, 100) : thirst = Math.min(thirst + 40,100);
+    catIsTrigger = true;
+    await walkToTarget(targetX, targetY);
+    await doAction("eat", catFrameCount2, 10);
+    catIsTrigger = false;
+    propsList = propsList.filter(f => f.type !== "FoodBowl" && f.type !== "WaterBowl");
+    drawProps();
+  }
+  async function triggerCatPlay(targetX, targetY) {
+    playMeow();
+    catIsTrigger = true;
+    await walkToTarget(targetX, targetY);
+    await doAction("eat", catFrameCount1, 10);
+    catIsTrigger = false;
+  }
+  async function triggerCatSleep(targetX, targetY) {
+    playMeow();
+    catIsTrigger = true;
+    await walkToTarget(targetX, targetY);
+    await doAction("sleep", catFrameCount2, 20);
+    catIsTrigger = false;
+  }
+
+
+
+  document.addEventListener("mousemove",  (e) => {
+    const rect = catCanvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const left   = catX;
+    const right  = catX + catFrameWidth;
+    const top    = catY;
+    const bottom = catY + catFrameHeight;
+
+    const isInside =
+            mouseX >= left && mouseX <= right &&
+            mouseY >= top  && mouseY <= bottom;
+
+    if (isInside && !hasMeowed) {
+      playMeow();
+      hasMeowed = true;
+    }
+
+    if (!isInside) {
+      hasMeowed = false;
+    }
+  });
+
+
+  setInterval(() => {
+    if(!catIsMove && !catIsTrigger){
+      catIsMove = true;
+      pickRandomAction();
+    }
+  }, 100);
+
+  setInterval(() => {
+    if (!catIsTrigger) {
+      hunger = Math.max(hunger - 1, 0);
+      thirst = Math.max(thirst - 1, 0);
+    }
+  }, 60000);
+  setInterval(updateStatusBars, 1000);
+
+
+  /////////////////////////////////Propss///////////////////////////////
+  function drawProps(){
+    bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+    propsList.forEach(f => {
+      if(f.mirror)
+        drawMirroredPropss(f.image, f.x, f.y);
+      else
+        bgCtx.drawImage(f.image, f.x, f.y, f.image.width, f.image.height);
+    });
+  }
+  function drawMirroredPropss(image, x, y) {
+    bgCtx.save();
+    bgCtx.scale(-1, 1); // 水平鏡像
+    bgCtx.drawImage(image, -x - image.width, y); // x 要負的，對應 scale(-1)
+    bgCtx.restore();
+  }
+  function updatePropsAvailability() {
+    const now = Date.now();
+    const foodItem = document.querySelector('.props-item[data-type="FoodBowl"]');
+    const waterItem = document.querySelector('.props-item[data-type="WaterBowl"]');
+    if (foodItem) {
+      if (now - lastFeedTime[0] < FEED_INTERVAL)
+        foodItem.classList.add("disabled");
+      else {
+        foodItem.classList.remove("disabled");
+        foodItem.classList.remove("used");
+        usedPropsTypes.delete("FoodBowl");
+      }
+
+    }
+    if (waterItem) {
+      if (now - lastFeedTime[1] < FEED_INTERVAL)
+        waterItem.classList.add("disabled");
+      else {
+        waterItem.classList.remove("disabled");
+        waterItem.classList.remove("used");
+        usedPropsTypes.delete("WaterBowl");
+      }
+    }
+  }
+  function putProp(rect, x, y, type, image){
+    let mirror = false;
+    if(PropsIsOnWall.get(type)){
+      if (!isPointInPolygon({ x: x, y: y }, rightWallPolygon))
+        if (isPointInPolygon({ x: x, y: y }, leftWallPolygon))
+          mirror = true;
+        else
+          return;
+    } else {
+      if (!isPointInPolygon({ x: x, y: y }, leftfloor))
+        if (isPointInPolygon({ x: x, y: y }, rightfloor))
+          mirror = true;
+        else
+          return;
+    }
+    x -= image.width/2;
+    y -= image.height/2;
+    propsList.push({ image, type, mirror, x, y});
+    usedPropsTypes.add(type);
+    drawProps();
+
+    // 處理貓的互動
+    if (type === "FoodBowl")
+      triggerCatEat(x-image.width - 10, y - 45, 0);
+    if (type === "WaterBowl")
+      triggerCatEat(x-image.width - 10, y - 45, 1);
+    if (type === "ball")
+      triggerCatPlay(x-image.width - 10, y - 45);
+    if (type === "bed")
+      triggerCatSleep(x , y  - 20);
+    document.querySelectorAll(".props-item").forEach(item => {
+      if (item.dataset.type === type) {
+        item.classList.add("used");
+      }
+    });
+  }
+
+
+
+  // 道具拖曳開始
+  document.querySelectorAll(".props-item").forEach(item => {
+    item.addEventListener("dragstart", (e) => {
+      draggingProps = {
+        type: item.dataset.type,
+        image: new Image()
+      };
+      draggingProps.image.src = item.src;
+      // 道具透明
+      item.style.opacity = 0.5;
+    });
+    item.addEventListener("dragend", (e) => {
+      draggingProps = null;
+      item.style.opacity = "";
+    });
+  });
+
+  // 背景允許放置
+  bgCanvas.addEventListener("dragover", (e) => {
+    e.preventDefault();
+  });
+
+  bgCanvas.addEventListener("drop", (e) => {
+    e.preventDefault();
+    if (!draggingProps) return;
+    const rect = bgCanvas.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
+    let type = draggingProps.type;
+    let image = draggingProps.image;
+    putProp(rect, x, y, type, image);
+  });
+
+  document.querySelectorAll(".props-item").forEach(item => {
+    item.addEventListener("click", () => {
+      const now = Date.now();
+      const type = item.dataset.type;
+
+      if (type === "FoodBowl" && now - lastFeedTime[0] < FEED_INTERVAL ||
+              type === "WaterBowl" && now - lastFeedTime[1] < FEED_INTERVAL)
+        return;
+
+      if (usedPropsTypes.has(type) && (type !== "FoodBowl" || type !== "WaterBowl") ){
+        propsList = propsList.filter(f => f.type !== type);
+        usedPropsTypes.delete(type);
+        item.classList.remove("used");
+        drawProps();
+        return;
+      }
+      selectedProps = {
+        type,
+        image: new Image()
+      };
+      selectedProps.image.src = item.src;
+    });
+  });
+
+  bgCanvas.addEventListener("click", (e) => {
+    if (!selectedProps) return;
+    const rect = bgCanvas.getBoundingClientRect();
+    const image = selectedProps.image;
+    const type = selectedProps.type;
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
+    putProp(rect, x, y, type, image);
+    selectedProps = null;
+  });
+
+  setInterval(updatePropsAvailability, 1000);
+
+  ///////////////////////////////////////////////////////////////////////////
+
+  function updateGradientBackground() {
+    const hour = new Date().getHours();
+
+    let gradient = "";
+    if (hour >= 6 && hour < 16)
+      gradient = "linear-gradient(to right, #3a7bd5, #00d2ff)";
+    else if (hour >= 16 && hour < 19)
+      gradient = "linear-gradient(to right, #FFD194, #D1913C)";
+    else
+      gradient = "linear-gradient(to right, #434343, #000000)";
+
+    document.body.style.background = gradient;
+  }
+  updateGradientBackground();
+  setInterval(updateGradientBackground, 60 * 10000);
+
+
+  function updateRealTime() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById("time-ui").textContent = `🕒 ${hh}:${mm}`;
+  }
+  updateRealTime();
+  setInterval(updateRealTime, 1000);
+
+  window.addEventListener("load", () => {
+    const guideOverlay = document.getElementById("guide-overlay");
+    if (guideOverlay) {
+      const dismissGuide = () => {
+        guideOverlay.style.display = "none";
+        bgm.volume = 0.3;
+        bgm.play().catch(()=>{}); // just be quiet if unable to play
+        window.removeEventListener("click", dismissGuide);
+      };
+      setTimeout(() => {
+        window.addEventListener("click", dismissGuide);
+      }, 500);
+    }
+  });
+
+  function toggleMute() {
+    bgm.muted = !bgm.muted;
+    const button = document.getElementById("audio-ui");
+    button.textContent = bgm.muted ? "🔇" : "🔊";
+  }
+
+  function toggleMenu() {
+    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+  }
+  document.addEventListener('click', function(event) {
+    const isClickInside = dropdown.contains(event.target) || event.target.classList.contains('menu-toggle');
+    if (!isClickInside) dropdown.style.display = 'none';
+  });
+  window.addEventListener("load", () => {
+    const guideOverlay = document.getElementById("guide-overlay");
+    if (guideOverlay) {
+      const dismissGuide = () => {
+        guideOverlay.style.display = "none";
+        window.removeEventListener("click", dismissGuide);
+      };
+      setTimeout(() => {
+        window.addEventListener("click", dismissGuide);
+      }, 500);
+    }
+  });
+  ////////////////////////////下雨///////////////////////////////
+
+  window.onresize=function(){
+    boxHeight=box.clientHeight;
+    boxWidth=box.clientWidth;
+  }
+  setInterval(()=>{
+    const rain=document.createElement('div');
+    rain.classList.add('rain');
+    rain.style.top=0;
+    // 随机刷新雨点位置
+    rain.style.left=Math.random()*boxWidth+'px';
+    // 随机雨点透明度
+    rain.style.opacity=Math.random();
+    box.appendChild(rain);
+    // 每隔一段时间,雨水下落
+    let race=1;
+    const timer=setInterval(()=>{
+      // 判断“雨滴”元素的top属性是否超出“盒子”元素的高度来决定是否停止动画
+      if(parseInt(rain.style.top)>boxHeight){
+        clearInterval(timer);
+        box.removeChild(rain);
+      }
+      // 每次定时器执行时，“雨滴”元素的top值会逐渐增加，
+      //并且增加的速率会随着时间的推移而逐渐加快
+      race++;
+      rain.style.top=parseInt(rain.style.top)+race+'px'
+    },20)
+  },20)
+
+  ///////////////////////////////////////////////////////////////
+
+  function resizeCanvas() {
+    const container = document.querySelector(".canvas-container");
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    bgCanvas.width = width;
+    bgCanvas.height = height;
+    catCanvas.width = width;
+    catCanvas.height = height;
+
+    drawProps();
+    drawCat(catActionMap.get("idle"));
+  }
+
+  window.addEventListener("resize", resizeCanvas);
+  window.addEventListener("load", resizeCanvas);
+
+</script>
+</body>
+</html>

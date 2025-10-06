@@ -1,0 +1,11 @@
+/database.json
+/.env
+/.venv/
+/.idea/
+/.vscode/
+
+__pycache__/
+*.pyc
+
+static/uploads/*
+!static/uploads/.gtkeep

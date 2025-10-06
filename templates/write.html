@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>寫日記</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(270deg, #f9e4e0, #dce8f4, #f6ede0);
+      background-size: 600% 600%;
+      z-index: -1;
+      animation: flow 20s ease infinite;
+    }
+    @keyframes flow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background-color: #fffafc;
+      padding: 2rem;
+    }
+
+    h2, h3 {
+      color: #444;
+    }
+
+    textarea {
+      width: 100%;
+      font-size: 1rem;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    /* button {
+      margin-top: 1rem;
+      padding: 0.6rem 1rem;
+      background-color: #8ac6d0;
+      border: none;
+      border-radius: 999px;
+      color: white;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    } */
+
+    button:hover {
+      background-color: #6fb5c0;
+    }
+
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 40px;
+    }
+
+    .inspiration {
+      flex: 1;
+      background: #f0f0f0;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    .form-area {
+      flex: 2;
+    }
+
+    canvas {
+      display: block;
+      margin-top: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      background-color: #fffafc;
+    }
+
+    .tools {
+      margin-top: 1rem;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .tools label {
+      font-size: 0.95rem;
+    }
+
+    select#tool {
+      font-size: 1rem;
+      padding: 3px 6px;
+    }
+
+    input[type="file"] {
+      font-size: 1rem;
+      padding: 5px;
+    }
+
+    #clearCanvas,#downloadCanvas {
+      margin-top: -3px;
+    }
+
+    .menu-wrapper {
+      position: relative;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .menu-toggle {
+      font-size: 30px;
+      cursor: pointer;
+      padding: 10px;
+    }
+
+    .dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 45px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      z-index: 10;
+      padding: 10px;
+      min-width: 150px;
+    }
+
+    .dropdown a {
+      display: block;
+      padding: 8px;
+      text-decoration: none;
+      color: black;
+    }
+
+    .dropdown a:hover {
+      background-color: #f2f2f2;
+    }
+  </style>
+</head>
+<body class="bg-transparent font-sans">
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-8 py-4 bg-white/70 backdrop-blur-md shadow-md">
+  <a href="/dashboard">
+    <h1 class="text-2xl font-bold text-[#6C584C]">Exchange Diary</h1>
+  </a>
+  <nav class="space-x-4">
+    <a href="/dashboard" class="text-[#6C584C]">所有日記</a>
+    <a href="/my_diary" class="text-[#6C584C]">我的日記</a>
+    <a href="/quiz" class="text-[#6C584C]">心理測驗</a>
+    <a href="/game" class="text-[#6C584C]">小遊戲</a>
+    <a href="/logout" class="text-[#6C584C] underline">登出</a>
+  </nav>
+</header>
+
+<main class="max-w-6xl mx-auto p-6 mt-[72px] flex gap-6">
+  <div class="container">
+    <div class="inspiration">
+      <h3 class="text-xl font-semibold mb-4">給你的靈感</h3>
+      <p><strong>某位使用者</strong> 寫道：</p>
+      <p>這是一段範例日記內容，用來提供你寫作的靈感：</p>
+      <br>
+      <p>今天的天氣陰陰的，心情也跟著低落起來。雖然試著讓自己忙起來，但還是不小心陷入了胡思亂想。
+        不過晚上的時候去便利商店買了熱可可，一點點甜味竟然讓我覺得好像還有一絲溫暖存在。</p>
+    </div>
+
+    <div class="form-area">
+      <h2 class="text-xl font-semibold mb-4">寫下你的心情</h2>
+      <form id="diaryForm" method="post" enctype="multipart/form-data">
+        <div class="mood-container">
+          <span class="mood-label">心情：</span>
+          <div class="mood-options">
+            <input type="radio" id="mood_happy" name="mood" value="happy" required>
+            <label for="mood_happy" title="開心">😊</label>
+
+            <input type="radio" id="mood_sad" name="mood" value="sad">
+            <label for="mood_sad" title="難過">😢</label>
+
+            <input type="radio" id="mood_angry" name="mood" value="angry">
+            <label for="mood_angry" title="憤怒">😠</label>
+
+            <input type="radio" id="mood_excited" name="mood" value="excited">
+            <label for="mood_excited" title="興奮">🤩</label>
+
+            <input type="radio" id="mood_calm" name="mood" value="calm">
+            <label for="mood_calm" title="平靜">😌</label>
+
+            <input type="radio" id="mood_anxious" name="mood" value="anxious">
+            <label for="mood_anxious" title="焦慮">😰</label>
+          </div>
+        </div>
+        <h1></h1>
+        <textarea id="content" name="content" rows="6" placeholder=" 寫點什麼吧..." required></textarea><br>
+        
+        <label><input type="checkbox" name="public"> 公開這篇日記</label><br><br>
+
+        <input type="file" name="image" accept="image/*"><br><br>
+
+        <h3 class="text-xl font-semibold mb-4">或畫點什麼吧</h3>
+
+        <div class="tools flex flex-row flex-wrap items-center gap-4 mb-4">
+          <div class="flex items-center gap-2">
+            <span>筆刷顏色：</span>
+            <input type="color" id="penColor" value="#000000" class="w-10 h-8 p-0 border rounded">
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span>筆刷粗細：</span>
+            <input type="range" id="penSize" min="1" max="20" value="3" class="w-32">
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span>工具：</span>
+            <select id="tool" class="border border-gray-300 rounded px-2 py-1">
+              <option value="pen">畫筆</option>
+              <option value="eraser">橡皮擦</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button type="button" id="clearCanvas"
+              class="px-4 py-2 bg-[#61c9d0] text-white rounded-full hover:bg-[#4fb5c0] transition">
+              清除畫布
+            </button>
+            <button type="button" id="downloadCanvas"
+              class="px-4 py-2 bg-[#88cc88] text-white rounded-full hover:bg-[#6fbf6f] transition">
+              下載圖片
+            </button>
+          </div>
+        </div>
+
+        <canvas id="drawingCanvas" width="600" height="400"></canvas>
+        <input type="hidden" name="drawing" id="drawingInput">
+
+        <button type="submit" class="mt-4 px-6 py-2 bg-[#8ac6d0] text-white text-lg font-semibold rounded-full hover:bg-[#6fb5c0] transition-all">
+          送出
+        </button>
+      </form>
+    </div>
+
+<body>
+
+
+
+
+</main>
+
+<script>
+  const dropdown = document.getElementById('dropdownMenu');
+  const canvas = document.getElementById('drawingCanvas');
+  const ctx = canvas.getContext('2d');
+  let drawing = false;
+
+  const penColorInput = document.getElementById('penColor');
+  const penSizeInput = document.getElementById('penSize');
+  const toolSelect = document.getElementById('tool');
+  const clearBtn = document.getElementById('clearCanvas');
+  const downloadBtn = document.getElementById('downloadCanvas');
+
+  function toggleMenu() {
+    dropdown.style.display = (dropdown.style.display === 'block') ? 'none' : 'block';
+  }
+
+  document.addEventListener('click', function(event) {
+    const isClickInside = dropdown.contains(event.target) || event.target.classList.contains('menu-toggle');
+    if (!isClickInside) {
+      dropdown.style.display = 'none';
+    }
+  });
+
+  // 畫圖事件
+  canvas.addEventListener('mousedown', () => {
+    drawing = true;
+    ctx.beginPath();
+  });
+
+  canvas.addEventListener('mouseup', () => {
+    drawing = false;
+    ctx.beginPath();
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    drawing = false;
+    ctx.beginPath();
+  });
+
+  canvas.addEventListener('mousemove', function(e) {
+    if (!drawing) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const color = penColorInput.value;
+    const size = penSizeInput.value;
+    const tool = toolSelect.value;
+
+    ctx.lineWidth = size;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = (tool === 'eraser') ? '#fffafc' : color;
+
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  });
+
+  // 清除畫布
+  clearBtn.addEventListener('click', function () {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#fffafc';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  });
+
+  // 下載圖片
+  downloadBtn.addEventListener('click', function () {
+    const link = document.createElement('a');
+    link.download = 'my_drawing.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+
+  document.getElementById('diaryForm').addEventListener('submit', async function(event) {
+    event.preventDefault();
+
+    const textarea = document.getElementById('content');
+    const drawingInput = document.getElementById('drawingInput');
+    drawingInput.value = canvas.toDataURL('image/png');
+
+    const wantSuggestion = confirm("你是否需要 Gemini 建議？");
+
+    if (wantSuggestion) {
+      try {
+        const response = await fetch('/gemini_suggestion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: textarea.value })
+        });
+        const data = await response.json();
+        textarea.value += '\n\n' + data.suggestion;
+      } catch (error) {
+        alert("⚠️ 取得 Gemini 建議失敗，將直接送出。");
+      }
+    }
+
+    this.submit();
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html> 
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登入 - Exchange Diary</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(270deg, #f9e4e0, #e5edf5, #f3ede4);
+      background-size: 600% 600%;
+      z-index: -1;
+      animation: flow 20s ease infinite;
+    }
+
+    @keyframes flow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    
+    img.float-slow {
+      position: absolute;
+      z-index: 0;       
+      opacity: 0.6;     /* 如果太淡，可以調整 */
+      animation: float 6s ease-in-out infinite;
+    }
+
+  </style>
+</head>
+<body class="bg-transparent font-sans overflow-hidden">
+  <div class="flex h-screen">
+    <!-- Left Panel -->
+    <div class="hidden md:flex w-1/2 bg-[#EACDC2]/70 backdrop-blur-md items-center justify-center">
+      <div class="text-center px-8">
+        <img src="/static/images/icon.png" alt="Logo" class="mx-auto mb-4 w-40 h-40">
+        <h1 class="text-4xl font-bold text-[#6C584C] mb-2">歡迎回來</h1>
+        <p class="text-[#6C584C] text-lg leading-relaxed">
+          與朋友一起交換日記，記錄你的每一段旅程與心情。
+        </p>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="w-full md:w-1/2 flex flex-col justify-center items-center px-8 md:px-16 bg-white/70 backdrop-blur-md rounded-l-3xl shadow-2xl">
+      <div class="w-full max-w-sm">
+        <h2 class="text-3xl font-semibold text-[#6C584C] mb-6">登入</h2>
+        <div class="space-y-4">
+          <input type="text" id="username" placeholder="帳號" class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#B3C8CF]">
+          <input type="password" id="password" placeholder="密碼" class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#B3C8CF]">
+          <button onclick="login()" class="w-full py-3 rounded-lg bg-[#B3C8CF] text-white font-semibold hover:bg-[#A2BBC2]">登入</button>
+          <p id="message" class="text-sm"></p>
+          <hr class="my-4">
+          <p class="text-center">還沒有帳號？<a href="/register" class="text-[#6C584C] underline">前往註冊</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 漂浮背景裝飾圖 -->
+  <img src="/static/images/star.png" class="absolute top-12 left-20 w-10 opacity-30 float-slow">
+  <img src="/static/images/heart.png" class="absolute bottom-16 left-1/3 w-8 opacity-30 float-slow">
+  <img src="/static/images/feather.png" class="absolute top-1/4 right-24 w-12 opacity-30 float-slow">
+  <img src="/static/images/letter.png" class="absolute bottom-10 right-8 w-14 opacity-30 float-slow">
+
+  <script>
+    async function login() {
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          username: document.getElementById('username').value,
+          password: document.getElementById('password').value
+        })
+      });
+      const data = await res.json();
+      const message = document.getElementById('message');
+      if (data.status === 'success') {
+        message.textContent = '登入成功，跳轉中...';
+        message.style.color = 'green';
+        setTimeout(() => window.location.href = '/dashboard', 800);
+      } else {
+        message.textContent = data.message;
+        message.style.color = 'red';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>日記行事曆</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(270deg, #f9e4e0, #dce8f4, #f6ede0);
+      background-size: 600% 600%;
+      z-index: -1;
+      animation: flow 20s ease infinite;
+    }
+    @keyframes flow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    html, body {
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      color: #333;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: row;
+      gap: 20px;
+      height: calc(100vh - 130px);
+      margin: 80px 0 50px 0;
+      width: 100%;
+      padding: 0 10px;
+      box-sizing: border-box;
+    }
+
+    .calendar-container, .diary-container, .chart-container {
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+
+    .calendar-container { flex: 3; overflow: hidden; }
+    .diary-container { flex: 4; }
+    .chart-container { flex: 3; }
+
+    .diary-card {
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: 0.3s;
+      position: relative;
+      height: 320px;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .calendar-header, .calendar-day {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 8px;
+      background-color: #e0e0e0;
+      font-size: 1.125rem;
+      height: 55px;
+    }
+    .calendar-container h1 { font-size: 1.25rem; font-weight: bold;}
+    .calendar-day { cursor: default; }
+    .calendar-header { background-color: #d0ecff; font-weight: bold; }
+
+    .has-entry { background-color: #90ee90; }
+    .today { background-color: #a3d4ff !important; font-weight: bold; }
+
+    .calendar-selectors {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .calendar-nav-bottom {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+
+    .calendar-nav-bottom button {
+      padding: 6px 12px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .calendar-nav-bottom button:hover {
+      background-color: #0056b3;
+    }
+
+    .calendar-selectors select {
+      padding: 5px 10px;
+      font-size: 16px;
+      color: #000000;
+      border: 1px solid #666666;
+      border-radius: 4px;
+    }
+    #diary-title {
+      font-size: 1.25rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body class="bg-transparent font-sans">
+
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-8 py-4 bg-white/70 backdrop-blur-md shadow-md">
+  <a href="/dashboard">
+    <h1 class="text-2xl font-bold text-[#6C584C]">Exchange Diary</h1>
+  </a>
+  <nav class="space-x-4">
+    <a href="/dashboard" class="text-[#6C584C]">所有日記</a>
+    <a href="/my_diary" class="text-[#6C584C]">我的日記</a>
+    <a href="/quiz" class="text-[#6C584C]">心理測驗</a>
+    <a href="/game" class="text-[#6C584C]">小遊戲</a>
+    <a href="/logout" class="text-[#6C584C] underline">登出</a>
+  </nav>
+</header>
+<a href="/write" class="fixed bottom-6 right-6 z-50">
+  <img src="{{ url_for('static', filename='images/pen.png') }}"
+       alt="新增日記"
+       class="w-24 h-24 drop-shadow-[0_8px_15px_rgba(0,0,0,0.3)] hover:scale-110 transition-transform duration-200 rounded-full">
+</a>
+
+<div class="container">
+  <div class="calendar-container">
+    <h1>📅 行事曆</h1>
+    <div class="calendar-selectors">
+      <select id="year-selector"></select>
+      <select id="month-selector"></select>
+    </div>
+    <h2 id="current-month"></h2>
+    <div id="calendar" class="grid grid-cols-7 gap-2"></div>
+    <div class="calendar-nav-bottom">
+      <button id="prev-month">← 上個月</button>
+      <button id="next-month">下個月 →</button>
+    </div>
+  </div>
+
+  <div class="diary-container">
+    <h2 id="diary-title"></h2>
+    <div id="diary-list" class="flex flex-col space-y-4"></div>
+  </div>
+
+  <div class="chart-container">
+    <h2 class="text-xl font-bold mb-4">📊 心情統計</h2>
+    <canvas id="moodChart" width="300" height="300"></canvas>
+  </div>
+</div>
+
+<script>
+  const yearSelector = document.getElementById('year-selector');
+  const monthSelector = document.getElementById('month-selector');
+  const currentMonthEl = document.getElementById('current-month');
+  const diaryListEl = document.getElementById('diary-list');
+  const calendarEl = document.getElementById('calendar');
+
+  let current = new Date();
+  let moodChart = null;
+
+  const diaries = [
+    {% for d in diaries %}
+  {
+    id: {{ d.id }},
+    created_at: "{{ d.created_at }}",
+            formatted_date: "{{ d.formatted_date }}",
+          image_path: "{{ d.image_path }}",
+          image_url: "{{ url_for('static', filename=d.image_path.replace('\\', '/')) if d.image_path else '' }}",
+          content: `{{ d.content | e }}`,
+          public: {{ 'true' if d.public else 'false' }},
+    mood: "{{ d.mood }}",
+            time_since: "{{ time_since(d.created_at) }}"
+  },
+  {% endfor %}
+  ];
+
+  function getKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
+  function updateMoodChart(year, month) {
+    const moodCounts = {
+      happy: 0, sad: 0, angry: 0, excited: 0, calm: 0, anxious: 0
+    };
+
+    const filtered = diaries.filter(d => {
+      const date = new Date(d.created_at);
+      return date.getFullYear() === year && date.getMonth() === month;
+    });
+
+    // 移除舊畫布或訊息
+    const chartContainer = document.querySelector('.chart-container');
+    const oldCanvas = document.getElementById('moodChart');
+    const oldMessage = document.getElementById('noMoodMessage');
+    if (oldCanvas) oldCanvas.remove();
+    if (oldMessage) oldMessage.remove();
+
+    if (filtered.length === 0) {
+      // 插入提示文字
+      const msg = document.createElement('p');
+      msg.id = 'noMoodMessage';
+      msg.className = 'text-center text-gray-500 mt-10';
+      msg.textContent = '本月沒有日記';
+      chartContainer.appendChild(msg);
+      return;
+    }
+
+    filtered.forEach(d => {
+      if (d.mood in moodCounts) moodCounts[d.mood]++;
+    });
+
+    // 建立新畫布
+    const canvas = document.createElement('canvas');
+    canvas.id = 'moodChart';
+    canvas.width = 300;
+    canvas.height = 300;
+    chartContainer.appendChild(canvas);
+
+    const ctx = canvas.getContext('2d');
+    moodChart = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: Object.keys(moodCounts),
+        datasets: [{
+          data: Object.values(moodCounts),
+          backgroundColor: ['#fcd34d', '#60a5fa', '#f87171', '#34d399', '#a78bfa', '#ff83ff']
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+  }
+
+  function updateDiaryList(year, month) {
+    diaryListEl.innerHTML = '';
+    const matched = diaries.filter(d => {
+      const dDate = new Date(d.created_at);
+      return dDate.getFullYear() === year && dDate.getMonth() === month;
+    });
+
+    if (matched.length === 0) {
+      diaryListEl.innerHTML = '<p>本月沒有日記。</p>';
+      return;
+    }
+
+    for (const d of matched) {
+      const card = document.createElement('div');
+      if (d.image_path) {
+        card.className = 'relative rounded-xl overflow-hidden shadow-lg group h-80 w-full';
+        card.style.backgroundImage = `url('${d.image_url}')`;
+        card.style.backgroundSize = 'cover';
+        card.style.backgroundPosition = 'center';
+      } else {
+        card.className = 'diary-card no-image bg-white';
+      }
+
+      card.innerHTML = `
+                <div class="absolute inset-0 bg-white/50"></div>
+                <div class="absolute inset-0 p-4 flex flex-col justify-between" style="color: #000000;">
+                    <div>
+                        <p class="text-sm">🕗 ${d.created_at}（${d.time_since}）</p>
+                        <p class="text-sm">
+                            ${d.public ? '🔓 公開' : '🔒 私人'} |
+                            ${
+              d.mood === 'happy' ? '😊' :
+                      d.mood === 'sad' ? '😢' :
+                              d.mood === 'angry' ? '😠' :
+                                      d.mood === 'excited' ? '🤩' :
+                                              d.mood === 'calm' ? '😌' :
+                                                      d.mood === 'anxious' ? '😰' :
+                                                              ''
+      }
+                        </p>
+                        <p class="text-base font-semibold whitespace-pre-line">${d.content}</p>
+                    </div>
+                    <form method="post" action="/delete_diary/${d.id}" onsubmit="return confirm('確定要刪除嗎？')">
+                        <button type="submit" class="mt-2 text-sm bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">🗑️ 刪除</button>
+                    </form>
+                </div>
+            `;
+      diaryListEl.appendChild(card);
+    }
+  }
+
+  function renderCalendar(year, month) {
+    currentMonthEl.textContent = `${year} 年 ${month + 1} 月`;
+    document.getElementById("diary-title").textContent = `📝 {{ username }} ${month + 1}月的日記`;
+    const firstDay = new Date(year, month, 1);
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const startWeekDay = firstDay.getDay();
+
+    calendarEl.innerHTML = '';
+    const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+    weekdays.forEach(d => {
+      const div = document.createElement('div');
+      div.className = 'calendar-header';
+      div.textContent = d;
+      calendarEl.appendChild(div);
+    });
+
+    for (let i = 0; i < startWeekDay; i++) {
+      calendarEl.appendChild(document.createElement('div'));
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d);
+      const key = getKey(date);
+      const div = document.createElement('div');
+      div.className = 'calendar-day';
+      div.textContent = d;
+      if (key === getKey(new Date())) div.classList.add('today');
+      if (diaries.find(di => di.formatted_date === key)) div.classList.add('has-entry');
+      calendarEl.appendChild(div);
+    }
+
+    updateDiaryList(year, month);
+    updateMoodChart(year, month);
+
+    yearSelector.value = year;
+    monthSelector.value = month;
+  }
+
+  document.getElementById('prev-month').addEventListener('click', () => {
+    current.setMonth(current.getMonth() - 1);
+    renderCalendar(current.getFullYear(), current.getMonth());
+  });
+
+  document.getElementById('next-month').addEventListener('click', () => {
+    current.setMonth(current.getMonth() + 1);
+    renderCalendar(current.getFullYear(), current.getMonth());
+  });
+
+  function initSelectors() {
+    const baseYear = 2020;
+    const nowYear = new Date().getFullYear();
+    for (let y = baseYear; y <= nowYear + 2; y++) {
+      const option = document.createElement('option');
+      option.value = y;
+      option.textContent = `${y} 年`;
+      yearSelector.appendChild(option);
+    }
+
+    for (let m = 0; m < 12; m++) {
+      const option = document.createElement('option');
+      option.value = m;
+      option.textContent = `${m + 1} 月`;
+      monthSelector.appendChild(option);
+    }
+
+    yearSelector.addEventListener('change', () => {
+      const y = parseInt(yearSelector.value);
+      const m = current.getMonth();
+      current.setFullYear(y);
+      renderCalendar(y, m);
+    });
+
+    monthSelector.addEventListener('change', () => {
+      const y = current.getFullYear();
+      const m = parseInt(monthSelector.value);
+      current.setMonth(m);
+      renderCalendar(y, m);
+    });
+  }
+
+  initSelectors();
+  renderCalendar(current.getFullYear(), current.getMonth());
+</script>
+</body>
+</html>

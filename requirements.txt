@@ -1,0 +1,6 @@
+flask
+tinydb
+python-dotenv
+google-generativeai
+humanize
+Werkzeug
